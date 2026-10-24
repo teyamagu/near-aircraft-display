@@ -1,0 +1,501 @@
+:root {
+  --bg: #090b12;
+  --panel: #12151f;
+  --panel-border: #232842;
+  --text: #d9dcf0;
+  --muted: #8087a8;
+  --accent: #5d78ff;
+  --led-text: #e7e9ff;
+  --led-green: #3dff55;
+  --led-orange: #ff5a24;
+  --led-blue: #1c3dff;
+  --led-globe-line: #8fb4ff;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #1a1f33;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+select,
+input {
+  padding: 3px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #0e111b;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* ---------- ステータスバー ---------- */
+.status-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.status-main,
+.manual-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.status-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-state {
+  margin-left: auto;
+}
+
+.status-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.badge.loading {
+  background: #1f2a5c;
+  color: #aebcff;
+}
+
+.badge.error {
+  background: #5c1f1f;
+  color: #ffb4b4;
+}
+
+.manual-form {
+  gap: 8px;
+}
+
+.manual-form input {
+  width: 110px;
+  font-size: 12px;
+}
+
+.manual-form button {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.form-error {
+  color: #ffb4b4;
+  font-size: 12px;
+}
+
+/* ---------- 通知 ---------- */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #141a30;
+  color: #b9c3f5;
+}
+
+.notice.warn {
+  background: #2a2412;
+  border-color: #5c4c1c;
+  color: #f0dc9c;
+}
+
+.notice.error {
+  background: #2d1618;
+  border-color: #64292e;
+  color: #ffc4c4;
+}
+
+/* ---------- メイン（LED + 一覧） ---------- */
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* ---------- LED パネル ---------- */
+.led-bezel {
+  width: 100%;
+  max-width: 960px;
+  padding: 2.2%;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #1b1c21, #08080a);
+  box-shadow:
+    inset 0 0 0 2px #2c2d34,
+    inset 0 3px 6px rgba(255, 255, 255, 0.06),
+    0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.led-panel {
+  container-type: inline-size;
+  position: relative;
+  display: grid;
+  grid-template-columns: 27% minmax(0, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  column-gap: 2.2cqw;
+  aspect-ratio: 2 / 1;
+  padding: 2.4cqw;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #000;
+  color: var(--led-text);
+  font-family: 'Silkscreen', 'Courier New', monospace;
+  font-size: 4.1cqw;
+  line-height: 1;
+  text-shadow: 0 0 0.6cqw rgba(150, 165, 255, 0.55);
+}
+
+.led-panel.idle {
+  color: #4a4f80;
+  text-shadow: none;
+}
+
+.led-globe {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--led-blue);
+  color: var(--led-globe-line);
+}
+
+.airline-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.led-panel.idle .led-globe {
+  background: #0b1250;
+  color: #2b3f9a;
+}
+
+.globe {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.led-row {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.led-airline {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.led-flight-row {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+}
+
+.led-flight {
+  flex: none;
+  white-space: nowrap;
+}
+
+.led-route {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.led-wide {
+  grid-column: 1 / -1;
+}
+
+.led-split {
+  display: flex;
+  justify-content: space-between;
+  gap: 2cqw;
+}
+
+.led-split > span {
+  flex: none;
+  white-space: nowrap;
+}
+
+.bar {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 0.35cqw;
+  min-width: 0;
+}
+
+.bar-cell {
+  flex: 1 1 0;
+  height: 1.6cqw;
+  max-width: 1.7cqw;
+}
+
+.bar-cell.done {
+  background: var(--led-green);
+  box-shadow: 0 0 0.8cqw rgba(61, 255, 85, 0.6);
+}
+
+.bar-cell.head {
+  background: var(--led-orange);
+  box-shadow: 0 0 0.9cqw rgba(255, 90, 36, 0.8);
+}
+
+.bar-cell.todo {
+  background: #141816;
+}
+
+/* 細かい LED ドットのオーバーレイ（文字は HTML のまま選択・読み上げ可能） */
+.led-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent 1.1px,
+    rgba(0, 0, 0, 0.9) 1.8px
+  );
+  background-size: 4px 4px;
+}
+
+/* ---------- 一覧 ---------- */
+.list-wrap {
+  position: relative;
+  min-height: 320px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.list {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.list-empty {
+  padding: 24px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.list-row:hover {
+  background: #181d31;
+}
+
+.list-row.selected {
+  border-color: var(--accent);
+  background: #1b2350;
+}
+
+.list-flight {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.list-distance,
+.list-alt {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.list-sub,
+.list-alt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.list-sub {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 地図 ---------- */
+.map {
+  height: 380px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: #0b0d14;
+}
+
+.map.pickable {
+  cursor: crosshair;
+}
+
+.map.pickable .leaflet-interactive {
+  cursor: pointer;
+}
+
+.user-icon,
+.ac-icon {
+  background: transparent;
+  border: 0;
+}
+
+.user-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #2f7bff;
+  box-shadow: 0 0 0 4px rgba(47, 123, 255, 0.3);
+}
+
+.ac-arrow {
+  width: 100%;
+  height: 100%;
+  background: #9db2ff;
+  clip-path: polygon(50% 4%, 92% 94%, 50% 74%, 8% 94%);
+}
+
+.ac-arrow.no-track {
+  clip-path: circle(28% at 50% 50%);
+}
+
+.ac-icon.selected {
+  filter: drop-shadow(0 0 5px #ff5a24);
+}
+
+.ac-icon.selected .ac-arrow {
+  background: #ffd24a;
+}
+
+.leaflet-tooltip.ac-label {
+  padding: 1px 6px;
+  border: 1px solid #ff5a24;
+  background: rgba(10, 12, 20, 0.9);
+  color: #ffd9c9;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.ac-label::before {
+  display: none;
+}
+
+/* ---------- モバイル ---------- */
+@media (max-width: 860px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list-wrap {
+    min-height: 0;
+    max-height: 340px;
+  }
+
+  .list {
+    position: static;
+    max-height: 340px;
+  }
+
+  .status-state {
+    margin-left: 0;
+  }
+
+  .led-dots {
+    background-size: 3px 3px;
+    background-image: radial-gradient(
+      circle at 50% 50%,
+      transparent 0,
+      transparent 0.8px,
+      rgba(0, 0, 0, 0.9) 1.4px
+    );
+  }
+}
