@@ -70,8 +70,10 @@ function cacheSeconds(pathname: string, status: number): number {
   return status === 200 ? 10 : 0
 }
 
+type WaitContext = { waitUntil(promise: Promise<unknown>): void }
+
 export default {
-  async fetch(request: Request, _env: unknown, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, _env: unknown, ctx: WaitContext): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request) })
     }
@@ -82,9 +84,9 @@ export default {
     const upstream = resolveUpstream(url.pathname, url.searchParams)
     if (upstream === null) return jsonError(404, 'not found', request)
 
-    const cache = caches.default
+    const cache = (globalThis.caches as { default?: Cache } | undefined)?.default
     const cacheKey = new Request(upstream, { method: 'GET' })
-    const cached = await cache.match(cacheKey)
+    const cached = cache ? await cache.match(cacheKey) : undefined
     if (cached) return withCors(cached, request)
 
     const upstreamResponse = await fetch(upstream, {
@@ -100,7 +102,7 @@ export default {
     headers.set('Content-Type', upstreamResponse.headers.get('Content-Type') ?? 'application/json; charset=utf-8')
     headers.set('Cache-Control', seconds > 0 ? `public, max-age=${seconds}` : 'no-store')
     const response = new Response(body, { status: upstreamResponse.status, headers })
-    if (seconds > 0) ctx.waitUntil(cache.put(cacheKey, response.clone()))
+    if (cache && seconds > 0) ctx.waitUntil(cache.put(cacheKey, response.clone()))
     return withCors(response, request)
   },
 }
