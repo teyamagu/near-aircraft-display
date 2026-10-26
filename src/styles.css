@@ -8,7 +8,6 @@
   --led-text: #e7e9ff;
   --led-green: #3dff55;
   --led-orange: #ff5a24;
-  --led-blue: #1c3dff;
   --led-globe-line: #8fb4ff;
   color-scheme: dark;
 }
@@ -226,7 +225,7 @@ input {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: var(--led-blue);
+  background: #000;
   color: var(--led-globe-line);
 }
 
@@ -237,8 +236,8 @@ input {
 }
 
 .led-panel.idle .led-globe {
-  background: #0b1250;
-  color: #2b3f9a;
+  background: #000;
+  color: #5c6494;
 }
 
 .globe {

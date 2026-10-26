@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Globe } from './Globe.tsx'
 
-const CELL = 4
-const PANEL_BLUE: Rgb = [28, 61, 255]
+/** 表示ドットの一辺。小さいほどロゴの文字が残る */
+const CELL = 2
 
 type Rgb = [number, number, number]
 
@@ -10,58 +10,24 @@ function avsLogoUrl(code: string): string {
   return `https://pics.avs.io/200/200/${encodeURIComponent(code)}.png`
 }
 
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  const rn = r / 255
-  const gn = g / 255
-  const bn = b / 255
-  const max = Math.max(rn, gn, bn)
-  const min = Math.min(rn, gn, bn)
-  const lightness = (max + min) / 2
-  if (max === min) return [0, 0, lightness]
-  const delta = max - min
-  const saturation = delta / (1 - Math.abs(2 * lightness - 1))
-  let hue = 0
-  if (max === rn) hue = (gn - bn) / delta + (gn < bn ? 6 : 0)
-  else if (max === gn) hue = (bn - rn) / delta + 2
-  else hue = (rn - gn) / delta + 4
-  return [hue / 6, saturation, lightness]
-}
-
-function hslToRgb(h: number, s: number, l: number): Rgb {
-  const hue = (p: number, q: number, t: number) => {
-    let tt = t
-    if (tt < 0) tt += 1
-    if (tt > 1) tt -= 1
-    if (tt < 1 / 6) return p + (q - p) * 6 * tt
-    if (tt < 1 / 2) return q
-    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6
-    return p
-  }
-  if (s === 0) {
-    const gray = Math.round(l * 255)
-    return [gray, gray, gray]
-  }
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
-  const p = 2 * l - q
-  return [
-    Math.round(hue(p, q, h + 1 / 3) * 255),
-    Math.round(hue(p, q, h) * 255),
-    Math.round(hue(p, q, h - 1 / 3) * 255),
-  ]
-}
-
 /**
- * 青地の LED に載せても色が残るようにする。
- * 赤などの色相はそのまま、真っ黒は白、青地に溶ける紺だけ明るくする。
+ * 色相は保ったまま、黒地に沈む色だけ持ち上げる。
+ * すでに明るい色はそのまま。真っ黒のインクは明るいドットにする。
  */
-export function ledInk(r: number, g: number, b: number): Rgb {
-  const [hue, saturation, lightness] = rgbToHsl(r, g, b)
-  if (lightness < 0.14) return [236, 240, 255]
-  const onBlueField = hue > 0.54 && hue < 0.75
-  if (!onBlueField) {
-    return hslToRgb(hue, Math.max(saturation, 0.72), Math.min(0.58, Math.max(lightness, 0.46)))
-  }
-  return hslToRgb(hue, Math.min(Math.max(saturation, 0.45), 0.7), Math.max(lightness, 0.74))
+export function logoInk(r: number, g: number, b: number): Rgb {
+  const red = Math.round(r)
+  const green = Math.round(g)
+  const blue = Math.round(b)
+  const max = Math.max(red, green, blue)
+  const min = Math.min(red, green, blue)
+  if (max <= 36 && max - min < 18) return [220, 224, 234]
+  if (max >= 188 || max === 0) return [red, green, blue]
+  const gain = 188 / max
+  return [
+    Math.min(255, Math.round(red * gain)),
+    Math.min(255, Math.round(green * gain)),
+    Math.min(255, Math.round(blue * gain)),
+  ]
 }
 
 function drawLedLogo(canvas: HTMLCanvasElement, image: HTMLImageElement) {
@@ -80,72 +46,77 @@ function drawLedLogo(canvas: HTMLCanvasElement, image: HTMLImageElement) {
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, width, height)
 
-  const source = document.createElement('canvas')
-  source.width = image.naturalWidth
-  source.height = image.naturalHeight
-  const sourceCtx = source.getContext('2d', { willReadFrequently: true })
-  if (!sourceCtx) return
-  sourceCtx.drawImage(image, 0, 0)
-  const pixels = sourceCtx.getImageData(0, 0, source.width, source.height).data
+  const cols = Math.max(1, Math.round(width / CELL))
+  const rows = Math.max(1, Math.round(height / CELL))
+  const bounds = opaqueBounds(image)
+  if (!bounds) return
 
-  const scale = Math.min(width / source.width, height / source.height) * 0.9
-  const dw = source.width * scale
-  const dh = source.height * scale
-  const ox = (width - dw) / 2
-  const oy = (height - dh) / 2
-  const radius = CELL * 0.4
+  const grid = document.createElement('canvas')
+  grid.width = cols
+  grid.height = rows
+  const gridCtx = grid.getContext('2d', { willReadFrequently: true })
+  if (!gridCtx) return
+  gridCtx.imageSmoothingEnabled = true
+  gridCtx.imageSmoothingQuality = 'high'
+  const scale = Math.min(cols / bounds.sw, rows / bounds.sh) * 0.96
+  const dw = Math.max(1, Math.round(bounds.sw * scale))
+  const dh = Math.max(1, Math.round(bounds.sh * scale))
+  gridCtx.drawImage(
+    image,
+    bounds.sx,
+    bounds.sy,
+    bounds.sw,
+    bounds.sh,
+    Math.floor((cols - dw) / 2),
+    Math.floor((rows - dh) / 2),
+    dw,
+    dh,
+  )
+  const pixels = gridCtx.getImageData(0, 0, cols, rows).data
 
-  const cols = Math.ceil(width / CELL)
-  const rows = Math.ceil(height / CELL)
+  const cellX = width / cols
+  const cellY = height / rows
+  // ドット中心が画素境界に乗ると黒と混ざって暗くなるので、画素を覆う大きさにする
+  const radius = Math.min(cellX, cellY) * 0.62
   for (let gy = 0; gy < rows; gy += 1) {
     for (let gx = 0; gx < cols; gx += 1) {
-      const cx = gx * CELL + CELL / 2
-      const cy = gy * CELL + CELL / 2
-      const color = sample(pixels, source.width, source.height, cx, cy, ox, oy, dw, dh)
+      const index = (gy * cols + gx) * 4
+      const alpha = pixels[index + 3] ?? 0
+      if (alpha < 140) continue
+      const color = logoInk(pixels[index] ?? 0, pixels[index + 1] ?? 0, pixels[index + 2] ?? 0)
       ctx.fillStyle = `rgb(${color[0]} ${color[1]} ${color[2]})`
       ctx.beginPath()
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+      ctx.arc(gx * cellX + cellX / 2, gy * cellY + cellY / 2, radius, 0, Math.PI * 2)
       ctx.fill()
     }
   }
 }
 
-function sample(
-  pixels: Uint8ClampedArray,
-  iw: number,
-  ih: number,
-  cx: number,
-  cy: number,
-  ox: number,
-  oy: number,
-  dw: number,
-  dh: number,
-): Rgb {
-  const x0 = Math.floor(((cx - CELL / 2 - ox) / dw) * iw)
-  const y0 = Math.floor(((cy - CELL / 2 - oy) / dh) * ih)
-  const x1 = Math.ceil(((cx + CELL / 2 - ox) / dw) * iw)
-  const y1 = Math.ceil(((cy + CELL / 2 - oy) / dh) * ih)
-  if (x1 <= 0 || y1 <= 0 || x0 >= iw || y0 >= ih) return PANEL_BLUE
-
-  let r = 0
-  let g = 0
-  let b = 0
-  let count = 0
-  const stepX = Math.max(1, Math.floor((x1 - x0) / 3))
-  const stepY = Math.max(1, Math.floor((y1 - y0) / 3))
-  for (let y = Math.max(0, y0); y < Math.min(ih, y1); y += stepY) {
-    for (let x = Math.max(0, x0); x < Math.min(iw, x1); x += stepX) {
-      const index = (y * iw + x) * 4
-      const alpha = pixels[index + 3] ?? 0
+/** 透明な余白を除き、マーク本体だけをドット面いっぱいに載せる */
+function opaqueBounds(image: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } | null {
+  const source = document.createElement('canvas')
+  source.width = image.naturalWidth
+  source.height = image.naturalHeight
+  const sourceCtx = source.getContext('2d', { willReadFrequently: true })
+  if (!sourceCtx) return null
+  sourceCtx.drawImage(image, 0, 0)
+  const pixels = sourceCtx.getImageData(0, 0, source.width, source.height).data
+  let minX = source.width
+  let minY = source.height
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < source.height; y += 1) {
+    for (let x = 0; x < source.width; x += 1) {
+      const alpha = pixels[(y * source.width + x) * 4 + 3] ?? 0
       if (alpha < 140) continue
-      r += pixels[index] ?? 0
-      g += pixels[index + 1] ?? 0
-      b += pixels[index + 2] ?? 0
-      count += 1
+      if (x < minX) minX = x
+      if (y < minY) minY = y
+      if (x > maxX) maxX = x
+      if (y > maxY) maxY = y
     }
   }
-  if (count === 0) return PANEL_BLUE
-  return ledInk(r / count, g / count, b / count)
+  if (maxX < minX || maxY < minY) return null
+  return { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
 }
 
 export function LedLogo({ code, name }: { code: string | null; name: string }) {
